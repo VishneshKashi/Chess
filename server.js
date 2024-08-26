@@ -23,6 +23,7 @@ class Game {
             ['', '', '', '', ''],
             ['B-P1', 'B-P2', 'B-H1', 'B-H2', 'B-P3']
         ];
+        this.lastMove = null;
     }
 
     addPlayer(playerId) {
@@ -38,8 +39,6 @@ class Game {
             return { valid: false, message: 'Not your turn' };
         }
 
-        // Implement move logic here
-        // This is a simplified version and doesn't include all game rules
         const [row, col] = this.findCharacter(character);
         if (row === -1) {
             return { valid: false, message: 'Character not found' };
@@ -64,8 +63,9 @@ class Game {
         this.board[newRow][newCol] = this.board[row][col];
         this.board[row][col] = '';
 
+        this.lastMove = { player: this.currentPlayer === 0 ? 'A' : 'B', character, direction: move };
         this.currentPlayer = 1 - this.currentPlayer;
-        return { valid: true, board: this.board };
+        return { valid: true, board: this.board, lastMove: this.lastMove };
     }
 
     findCharacter(character) {
@@ -115,7 +115,11 @@ io.on('connection', (socket) => {
         if (game) {
             const result = game.makeMove(socket.id, character, move);
             if (result.valid) {
-                io.to(gameId).emit('gameUpdate', { board: result.board, currentPlayer: game.players[game.currentPlayer] });
+                io.to(gameId).emit('gameUpdate', { 
+                    board: result.board, 
+                    currentPlayer: game.players[game.currentPlayer],
+                    lastMove: result.lastMove
+                });
             } else {
                 socket.emit('invalidMove', result.message);
             }

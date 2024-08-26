@@ -1,161 +1,84 @@
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Chess-like Game</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                background-color: #222;
-                color: white;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-            }
-            #game-container {
-                text-align: center;
-            }
-            #game-board {
-                display: grid;
-                grid-template-columns: repeat(5, 1fr);
-                gap: 2px;
-                margin-bottom: 20px;
-            }
-            .cell {
-                width: 60px;
-                height: 60px;
-                background-color: #444;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                cursor: pointer;
-            }
-            .cell.selected {
-                background-color: #668;
-            }
-            #move-options {
-                display: flex;
-                justify-content: center;
-                gap: 10px;
-                margin-top: 10px;
-            }
-            button {
-                padding: 5px 10px;
-                background-color: #446;
-                color: white;
-                border: none;
-                cursor: pointer;
-            }
-            button:hover {
-                background-color: #668;
-            }
-        </style>
-    </head>
-    <body>
-        <div id="game-container">
-            <h2 id="current-player">Waiting for opponent...</h2>
-            <div id="game-board"></div>
-            <div id="selected-character"></div>
-            <div id="move-options"></div>
-        </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess-like Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #game-container {
+            text-align: center;
+        }
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2px;
+            margin-bottom: 20px;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            background-color: #444;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .cell.selected {
+            background-color: #668;
+        }
+        .cell.player-A {
+            color: #ff9999;
+        }
+        .cell.player-B {
+            color: #99ff99;
+        }
+        #move-options {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        button {
+            padding: 5px 10px;
+            background-color: #446;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #668;
+        }
+        #move-history {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            padding: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h2 id="current-player">Waiting for opponent...</h2>
+        <div id="game-board"></div>
+        <div id="selected-character"></div>
+        <div id="move-options"></div>
+        <h3>Move History</h3>
+        <div id="move-history"></div>
+    </div>
 
-        <script src="/socket.io/socket.io.js"></script>
-        <script>
-            const socket = io();
-
-            const gameBoard = document.getElementById('game-board');
-            const currentPlayerDisplay = document.getElementById('current-player');
-            const selectedCharacterDisplay = document.getElementById('selected-character');
-            const moveOptionsDisplay = document.getElementById('move-options');
-
-            let currentPlayer = null;
-            let selectedCharacter = null;
-            let playerNumber = null;
-            let gameId = null;
-
-            socket.emit('joinGame');
-
-            socket.on('gameJoined', (data) => {
-                gameId = data.gameId;
-                playerNumber = data.playerNumber;
-                console.log(`Joined game ${gameId} as player ${playerNumber}`);
-            });
-
-            socket.on('gameStart', (data) => {
-                currentPlayer = data.currentPlayer;
-                updateBoard(data.board);
-                updateCurrentPlayerDisplay();
-            });
-
-            socket.on('gameUpdate', (data) => {
-                currentPlayer = data.currentPlayer;
-                updateBoard(data.board);
-                updateCurrentPlayerDisplay();
-            });
-
-            socket.on('invalidMove', (message) => {
-                alert(message);
-            });
-
-            function updateBoard(board) {
-                gameBoard.innerHTML = '';
-                for (let i = 0; i < 5; i++) {
-                    for (let j = 0; j < 5; j++) {
-                        const cell = document.createElement('div');
-                        cell.classList.add('cell');
-                        cell.dataset.row = i;
-                        cell.dataset.col = j;
-                        cell.textContent = board[i][j];
-                        cell.addEventListener('click', selectCharacter);
-                        gameBoard.appendChild(cell);
-                    }
-                }
-            }
-
-            function updateCurrentPlayerDisplay() {
-                currentPlayerDisplay.textContent = `Current Player: ${currentPlayer === socket.id ? 'You' : 'Opponent'}`;
-            }
-
-            function selectCharacter(event) {
-                const cell = event.target;
-                const character = cell.textContent;
-                if (character && character.startsWith(playerNumber === 1 ? 'A' : 'B') && currentPlayer === socket.id) {
-                    if (selectedCharacter) {
-                        document.querySelector('.selected')?.classList.remove('selected');
-                    }
-                    selectedCharacter = character;
-                    cell.classList.add('selected');
-                    selectedCharacterDisplay.textContent = `Selected: ${character}`;
-                    showMoveOptions(character);
-                }
-            }
-
-            function showMoveOptions(character) {
-                moveOptionsDisplay.innerHTML = '';
-                let moves;
-                if (character.includes('P')) {
-                    moves = ['L', 'R', 'F', 'B'];
-                } else if (character.includes('H1')) {
-                    moves = ['L', 'R', 'F', 'B'];
-                } else if (character.includes('H2')) {
-                    moves = ['FL', 'FR', 'BL', 'BR'];
-                }
-                moves.forEach(move => {
-                    const button = document.createElement('button');
-                    button.textContent = move;
-                    button.addEventListener('click', () => makeMove(move));
-                    moveOptionsDisplay.appendChild(button);
-                });
-            }
-
-            function makeMove(move) {
-                if (currentPlayer === socket.id) {
-                    socket.emit('makeMove', { gameId, character: selectedCharacter, move });
-                }
-            }
-        </script>
-    </body>
-    </html>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>
